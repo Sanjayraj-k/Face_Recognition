@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glimpse: Intelligent Face Recognition Platform</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-blue-600">Glimpse: Intelligent Face Recognition Platform</h1>
+            <p class="text-gray-600 mt-2">Upload a photo to search for matching faces in your album</p>
+        </header>
+        
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Upload Face to Search</h2>
+            <div id="solo-drop-area" class="drag-area flex flex-col items-center justify-center cursor-pointer mb-6">
+                <div id="solo-default" class="text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p class="mt-1 text-sm text-gray-600">Drag and drop a photo with a face or click to upload</p>
+                </div>
+            </div>
+            <input type="file" id="solo-input" accept="image/*" class="hidden">
+            
+            <div class="flex justify-center">
+                <button id="search-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    Search Album
+                </button>
+            </div>
+        </div>
+        
+        <div id="loading" class="hidden mt-8 flex flex-col items-center">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-600">Searching album... This may take a moment.</p>
+        </div>
+        
+        <div id="results" class="hidden mt-10 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Search Results</h2>
+            <div id="match-status" class="text-center mb-6"></div>
+            
+            <div id="matches-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Matches will be displayed here -->
+            </div>
+            
+            <div id="no-matches" class="hidden text-center py-10">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="mt-4 text-gray-600">No matching images found in your album.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="modalTitle" class="text-xl font-medium mb-4">Image Preview</h3>
+            <img id="modalImage" class="modal-image" src="" alt="Image Preview">
+            <div class="mt-4 flex justify-center">
+                <a id="downloadBtn" href="#" download="" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md">
+                    Download Original
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
