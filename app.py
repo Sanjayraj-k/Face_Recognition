@@ -249,8 +249,7 @@ def update_cache():
         print(f"Error updating cache: {str(e)}")
     finally:
         cache_updating = False
-
-def find_matches_in_album(solo_embedding, similarity_threshold=0.6):
+def find_matches_in_album(solo_embedding, similarity_threshold=0.3):
     """Find all images in the album that contain the query face using cache."""
     matches = []
     
@@ -279,12 +278,16 @@ def find_matches_in_album(solo_embedding, similarity_threshold=0.6):
                     best_similarity = similarity
                     best_face_position = position
                     
-                # If below threshold, consider it a match
+                # If below threshold, consider it a potential match
                 if similarity < similarity_threshold:
                     matched = True
             
-            # If matched, add to results
+            # If matched and similarity is greater than 70%, add to results
             if matched:
+                similarity_percentage = float((1 - best_similarity) * 100)  # Convert to percentage
+                if similarity_percentage <= 70:  # Skip if similarity is not greater than 70%
+                    continue
+                
                 # Read the original image
                 img_array = cv2.imread(img_path)
                 if img_array is None:
@@ -308,7 +311,7 @@ def find_matches_in_album(solo_embedding, similarity_threshold=0.6):
                 matches.append({
                     "filename": os.path.basename(img_path),
                     "filepath": img_path,
-                    "similarity": float((1 - best_similarity) * 100),  # Convert to percentage
+                    "similarity": similarity_percentage,
                     "image_data": f"data:image/jpeg;base64,{highlighted_b64}",
                     "original_image_data": f"data:image/jpeg;base64,{original_b64}"
                 })
