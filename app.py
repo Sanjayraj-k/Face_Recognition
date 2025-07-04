@@ -30,8 +30,8 @@ app.config['SECRET_KEY'] = 'your-secret-key'
 # Configure CORS for frontend
 CORS(app, supports_credentials=True)
 
-# MongoDB configuration
-client = MongoClient('mongodb://localhost:27017/')
+mongo_url = os.environ.get("MONGODB_URL", "mongodb://localhost:27017/")
+client = MongoClient(mongo_url)
 db = client['snapid_db']
 users_collection = db['users']
 photos_collection = db['photos']
