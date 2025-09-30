@@ -1,2 +1,5 @@
 env/
 frontend/node_modules/
+album/
+cache/
+dataset/
