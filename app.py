@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_file
 from flask_cors import CORS
 from pymongo import MongoClient
 import os
@@ -19,20 +19,30 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import bcrypt
 import urllib.parse
+import zipfile
+import io
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALBUM_FOLDER'] = 'album'
 app.config['CACHE_FOLDER'] = 'cache'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 1* 1024 * 1024  # 16MB max file size
 app.config['SECRET_KEY'] = 'your-secret-key'
 
-# Configure CORS for frontend
-CORS(app, supports_credentials=True)
+# Configure CORS
+CORS(app, supports_credentials=True, resources={
+    r"/*": {
+        "origins": ["http://localhost:3001", "http://127.0.0.1:3001","http://localhost:5173"],
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "expose_headers": ["Content-Type"],
+        "support_credentials": True
+    }
+})
 
 # MongoDB configuration
 client = MongoClient('mongodb://localhost:27017/')
-db = client['snapid_db']
+db = client['snapid']
 users_collection = db['users']
 photos_collection = db['photos']
 embeddings_collection = db['embeddings']
@@ -231,9 +241,11 @@ def find_matches_in_album(username, solo_embedding, similarity_threshold=0.3):
                 highlighted_b64 = base64.b64encode(highlighted_buffer).decode('utf-8')
                 _, original_buffer = cv2.imencode('.jpg', img_array)
                 original_b64 = base64.b64encode(original_buffer).decode('utf-8')
-                safe_filename = urllib.parse.quote(os.path.basename(img_path))
+
+                # FIX: Send the clean basename without any URL encoding
+                filename = os.path.basename(img_path)
                 matches.append({
-                    "filename": safe_filename,
+                    "filename": filename,
                     "filepath": img_path,
                     "similarity": similarity_percentage,
                     "image_data": f"data:image/jpeg;base64,{highlighted_b64}",
@@ -244,7 +256,6 @@ def find_matches_in_album(username, solo_embedding, similarity_threshold=0.3):
             continue
     matches.sort(key=lambda x: x["similarity"], reverse=True)
     return matches
-
 # API Routes
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -304,18 +315,20 @@ def upload_album():
         
         for photo in photos:
             if photo and photo.filename:
+                # Use secure_filename to get a clean, safe name like "my_photo.jpg"
                 filename = secure_filename(photo.filename)
-                filename = urllib.parse.quote(filename, safe='')
                 
+                # The check now works correctly on the clean filename
                 if not filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                     continue
                 
+                # The file is saved with the clean name
                 file_path = os.path.join(app.config['ALBUM_FOLDER'], filename)
                 photo.save(file_path)
                 
                 photos_collection.insert_one({
                     "username": username,
-                    "filename": filename,
+                    "filename": filename,  # Store the clean filename
                     "filepath": file_path,
                     "upload_date": datetime.utcnow()
                 })
@@ -334,7 +347,6 @@ def upload_album():
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 @app.route('/api/check_session', methods=['GET'])
 def check_session():
     if 'username' in session:
@@ -389,6 +401,70 @@ def search():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/download_photo/<filename>', methods=['GET'])
+def download_photo(filename):
+    if 'username' not in session:
+        return jsonify({"error": "Please login first"}), 401
+    
+    try:
+        username = session['username']
+        # The filename from the URL is already decoded by Flask.
+        # We query the database with this clean filename.
+        safe_filename = secure_filename(filename) # Sanitize to prevent any path attacks
+        photo = photos_collection.find_one({"username": username, "filename": safe_filename})
+
+        if not photo:
+            return jsonify({"error": "Photo not found"}), 404
+        
+        return send_file(
+            photo['filepath'],
+            mimetype='image/jpeg',
+            as_attachment=True,
+            download_name=safe_filename
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+@app.route('/api/download_all_matches', methods=['POST'])
+def download_all_matches():
+    if 'username' not in session:
+        return jsonify({"error": "Please login first"}), 401
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid request body"}), 400
+        
+        matches = data.get('matches', [])
+        if not matches:
+            return jsonify({"error": "No matches provided"}), 400
+        
+        username = session['username']
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for match in matches:
+                # The filename from the frontend is now clean, e.g., "my_photo.jpg"
+                filename = match.get('filename')
+                if not filename:
+                    continue
+
+                # Query the database directly with the clean filename
+                photo = photos_collection.find_one({"username": username, "filename": filename})
+                
+                # Check for existence of the record and the file on disk
+                if photo and photo.get('filepath') and os.path.exists(photo['filepath']):
+                    # Add the file to the zip with its simple, clean name
+                    zf.write(photo['filepath'], os.path.basename(photo['filepath']))
+        
+        memory_file.seek(0)
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'matched_photos_{username}.zip'
+        )
+    except Exception as e:
+        print(f"Error creating zip file: {e}") # Log the actual error to the console for debugging
+        return jsonify({"error": "An internal server error occurred while creating the zip file"}), 500
 @app.route('/api/update_cache', methods=['POST'])
 def force_update_cache():
     if 'username' not in session:
