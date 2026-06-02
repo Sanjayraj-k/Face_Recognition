@@ -11,3 +11,5 @@ facenet-pytorch
 scipy
 bcrypt
 requests
+scikit-learn
+transformers

@@ -23,7 +23,7 @@ This repository contains two Flask-based services and a React frontend:
 - `dataset_embeddings_clip.pkl` — cached CLIP embeddings
 
 ## Requirements
-- **Python 3** (for both APIs)
+- **Python 3.8+** (for both APIs)
 - **MongoDB** running locally for `app.py`
 - **Node.js + npm** for the frontend
 
@@ -31,12 +31,6 @@ This repository contains two Flask-based services and a React frontend:
 ### Python dependencies
 ```bash
 pip install -r requirements.txt
-```
-
-### Extra dependencies for `image.py`
-`image.py` uses CLIP utilities that are not listed in `requirements.txt`:
-```bash
-pip install transformers scikit-learn
 ```
 
 ## Run the APIs
