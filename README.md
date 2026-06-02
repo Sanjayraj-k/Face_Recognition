@@ -55,6 +55,5 @@ npm install
 npm run dev
 ```
 By default, the UI in `src/App.jsx` targets the CLIP API at `http://localhost:5000`.
-If you run the face-recognition API elsewhere, update the base URLs in:
-- `frontend/face/src/App.jsx` (CLIP)
-- `frontend/face/src/Lap.jsx` / `frontend/face/src/Drive.jsx` (face recognition)
+If you run either API elsewhere, update the base URL constants in the frontend source (search for
+`API_URL` and `API_BASE_URL`).
